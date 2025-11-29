@@ -43,6 +43,7 @@ const previewSelfie = document.getElementById("preview-selfie");
 
 // Durum değişkenleri
 let stream = null;
+let cameraInitialized = false;
 let processing = false;
 let captured = false;
 let cvReady = false;
@@ -105,20 +106,21 @@ function setupCanvasSize() {
     captureCanvas.height = height;
 }
 
-// KAMERA ARTIK SADECE BİR KEZ AÇILIYOR
+// KAMERA SADECE BİR KEZ AÇILIYOR
 async function initCamera() {
     try {
-        // Kamera zaten açıksa tekrar açma → ikinci bir izin sorulmaz
-        if (stream) return;
+        if (cameraInitialized) return; // ikinci kez asla açma
 
         const constraints = {
             video: {
-                facingMode: "environment" // tüm adımlar için aynı kamera
+                facingMode: "environment"
             },
             audio: false
         };
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);
+        cameraInitialized = true;
+
         video.srcObject = stream;
 
         video.onloadedmetadata = () => {
@@ -157,7 +159,7 @@ function processFrame() {
 
     const step = steps[currentStepIndex];
 
-    // Selfie adımında auto-capture yok, sadece manuel
+    // Selfie adımında auto-capture yok
     if (step === "selfie") {
         return;
     }
@@ -356,32 +358,27 @@ function autoCapture(rect) {
 function manualCapture() {
     const step = steps[currentStepIndex];
 
+    setupCanvasSize();
+    captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+    const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.92);
+
     if (step === "selfie") {
-        setupCanvasSize();
-        captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.92);
         selfieImage = dataUrl;
         previewSelfie.src = dataUrl;
-        captured = true;
-        restartBtn.disabled = false;
-        nextStepBtn.disabled = false;
         statusEl.textContent = "Selfie çekildi.";
-    } else {
-        setupCanvasSize();
-        captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.92);
-        if (step === "id_front") {
-            frontImage = dataUrl;
-            previewFront.src = dataUrl;
-        } else if (step === "id_back") {
-            backImage = dataUrl;
-            previewBack.src = dataUrl;
-        }
-        captured = true;
-        restartBtn.disabled = false;
-        nextStepBtn.disabled = false;
-        statusEl.textContent = "Manuel fotoğraf çekildi.";
+    } else if (step === "id_front") {
+        frontImage = dataUrl;
+        previewFront.src = dataUrl;
+        statusEl.textContent = "Manuel ön yüz çekildi.";
+    } else if (step === "id_back") {
+        backImage = dataUrl;
+        previewBack.src = dataUrl;
+        statusEl.textContent = "Manuel arka yüz çekildi.";
     }
+
+    captured = true;
+    restartBtn.disabled = false;
+    nextStepBtn.disabled = false;
 
     if (frontImage && backImage && selfieImage) {
         submitBtn.disabled = false;
@@ -409,6 +406,7 @@ function resetCurrentStep() {
     statusEl.textContent = "Bu adımı yeniden çekebilirsiniz.";
     processing = false;
     hideDebugRect();
+    setupCanvasSize();
     startProcessingLoop();
     submitBtn.disabled = !(frontImage && backImage && selfieImage);
 }
@@ -421,8 +419,6 @@ function goToNextStep() {
         stableFrames = 0;
         hideDebugRect();
         updateUIForStep();
-
-        // Kamera zaten açık, sadece işleme loop'unu yeniden başlat
         setupCanvasSize();
         startProcessingLoop();
     }
@@ -453,7 +449,7 @@ function onOpenCvReady() {
     updateUIForStep();
 
     if (!USE_FAKE_CAMERA) {
-        initCamera(); // burada bir kere açıyoruz
+        initCamera(); // SADECE BİR KEZ
     } else {
         setupCanvasSize();
         captured = false;
@@ -511,29 +507,19 @@ if (fakeCameraToggle) {
     fakeCameraToggle.addEventListener("change", (e) => {
         USE_FAKE_CAMERA = e.target.checked;
         if (USE_FAKE_CAMERA) {
-            if (testImageInput) {
-                testImageInput.disabled = false;
-            }
-            // Fake modda gerçek kamerayı kapat
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-                stream = null;
-            }
+            if (testImageInput) testImageInput.disabled = false;
+            // Kamerayı ARTIK durdurmuyoruz → yeniden izin isteme ihtimali yok
             setupCanvasSize();
             captured = false;
             startProcessingLoop();
         } else {
-            if (testImageInput) {
-                testImageInput.disabled = true;
-            }
+            if (testImageInput) testImageInput.disabled = true;
             testImage = null;
             captured = false;
             processing = false;
             hideDebugRect();
-            // Normal moda dön: kamera yoksa aç
-            if (cvReady) {
-                initCamera();
-            }
+            setupCanvasSize();
+            startProcessingLoop();
         }
     });
 }
