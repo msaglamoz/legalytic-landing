@@ -377,24 +377,19 @@ async function initCamera() {
 }
 
 
-	function setupCanvasSize() {
-		const vw = video.videoWidth;
-		const vh = video.videoHeight;
+    function setupCanvasSize() {
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
 
-		const baseWidth  = vw || 480;
-		const baseHeight = vh || 640;
+        const width = vw || 480;
+        const height = vh || 640;
 
-		const dpr = window.devicePixelRatio || 1;
+        processCanvas.width = width;
+        processCanvas.height = height;
 
-		// İşleme için çok abartmaya gerek yok, hız önemli:
-		processCanvas.width  = baseWidth;
-		processCanvas.height = baseHeight;
-
-		// Capture için biraz daha yüksek çözünürlük isteyebiliriz:
-		captureCanvas.width  = Math.round(baseWidth * dpr);
-		captureCanvas.height = Math.round(baseHeight * dpr);
-	}
-
+        captureCanvas.width = width;
+        captureCanvas.height = height;
+    }
 
     function startProcessingLoop() {
         if (processing || !cvReady) return;
