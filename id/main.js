@@ -102,93 +102,96 @@
     }
 
     // 💡 Kamerayı adım durumuna göre cihaz ID'si üzerinden seçiyoruz
-    async function initCamera() {
-        try {
-            const step = steps[currentStepIndex];
-            const isSelfie = step === "selfie";
 
-            // En az bir kere izin verildiyse label'lar dolar
-            if (!videoDevices.length) {
-                await refreshVideoDevices();
-            }
 
-            let videoConstraints = {};
+async function initCamera() {
+    try {
+        const step = steps[currentStepIndex];
+        const isSelfie = step === "selfie";
 
-            if (videoDevices.length) {
-                if (isSelfie) {
-                    // Ön kamera: label'da front / user / ön geçen cihazı ara
-                    let frontCam = videoDevices.find(d =>
-                        /front|user|ön/i.test(d.label)
-                    );
-
-                    // Label yoksa veya bulunamadıysa:
-                    if (!frontCam) {
-                        if (videoDevices.length === 2) {
-                            // 2 kamera varsa: 0=arka, 1=ön varsay
-                            frontCam = videoDevices[1];
-                        } else if (videoDevices.length > 2) {
-                            // Daha fazlaysa: son cihazı ön varsay
-                            frontCam = videoDevices[videoDevices.length - 1];
-                        } else {
-                            // Tek kamera varsa mecburen onu kullan
-                            frontCam = videoDevices[0];
-                        }
-                    }
-
-                    videoConstraints = { deviceId: { exact: frontCam.deviceId } };
-                } else {
-                    // Arka kamera: label'da back / rear / environment / arka geçen cihazı ara
-                    let backCam = videoDevices.find(d =>
-                        /back|rear|environment|arka/i.test(d.label)
-                    );
-
-                    if (!backCam) {
-                        // Label yoksa/ bulunamadıysa:
-                        // 2 kamera varsa: 0=arka varsay
-                        // Daha fazlaysa: ilk cihazı arka varsay
-                        backCam = videoDevices[0];
-                    }
-
-                    videoConstraints = { deviceId: { exact: backCam.deviceId } };
-                }
-            } else {
-                // Cihaz listesi yoksa eski davranışa dön (facingMode hint)
-                videoConstraints = {
-                    facingMode: isSelfie ? "user" : "environment"
-                };
-            }
-
-            const constraints = {
-                video: videoConstraints,
-                audio: false
-            };
-
-            // Eski stream varsa durdur
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-            }
-
-            console.log("Kamera constraints:", constraints);
-
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
-
-            // İlk kez stream açıldıysa enumerateDevices yap, label'lar dolsun
-            if (!videoDevices.length) {
-                await refreshVideoDevices();
-            }
-
-            video.onloadedmetadata = () => {
-                setupCanvasSize();
-                captured = false;
-                updateUIForStep();
-                startProcessingLoop();
-            };
-        } catch (err) {
-            console.error(err);
-            statusEl.textContent = "Kamera açılamadı: " + err.message;
+        // En az bir kere izin verildiyse label'lar dolar
+        if (!videoDevices.length) {
+            await refreshVideoDevices();
         }
+
+        let videoConstraints = {};
+
+        if (videoDevices.length) {
+            if (isSelfie) {
+                // 🔹 SELFIE: Ön kamera
+                let frontCam = videoDevices.find(d =>
+                    /front|user|ön/i.test(d.label)
+                );
+
+                // Label yoksa / bulunamadıysa:
+                if (!frontCam) {
+                    if (videoDevices.length === 2) {
+                        // Çoğu telefonda 0 = ön, 1 = arka gibi davranıyorsun şu an
+                        frontCam = videoDevices[0];
+                    } else {
+                        // 2'den fazlaysa, yine ilk cihazı ön varsay
+                        frontCam = videoDevices[0];
+                    }
+                }
+
+                videoConstraints = { deviceId: { exact: frontCam.deviceId } };
+            } else {
+                // 🔹 KİMLİK ADIMLARI: Arka kamera
+                let backCam = videoDevices.find(d =>
+                    /back|rear|environment|arka/i.test(d.label)
+                );
+
+                if (!backCam) {
+                    if (videoDevices.length === 2) {
+                        // 0'ı ön, 1'i arka kabul ediyoruz
+                        backCam = videoDevices[1];
+                    } else {
+                        // Emin olamıyorsak son cihazı arka varsay
+                        backCam = videoDevices[videoDevices.length - 1];
+                    }
+                }
+
+                videoConstraints = { deviceId: { exact: backCam.deviceId } };
+            }
+        } else {
+            // Cihaz listesi yoksa eski davranış (en son çare)
+            videoConstraints = {
+                facingMode: isSelfie ? "user" : "environment"
+            };
+        }
+
+        const constraints = {
+            video: videoConstraints,
+            audio: false
+        };
+
+        // Eski stream varsa durdur
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+        }
+
+        console.log("Kamera constraints:", constraints);
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+
+        // İlk kez stream açıldıysa enumerateDevices yap, label'lar dolsun
+        if (!videoDevices.length) {
+            await refreshVideoDevices();
+        }
+
+        video.onloadedmetadata = () => {
+            setupCanvasSize();
+            captured = false;
+            updateUIForStep();
+            startProcessingLoop();
+        };
+    } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Kamera açılamadı: " + err.message;
     }
+}
+
 
     function setupCanvasSize() {
         const vw = video.videoWidth;
