@@ -115,28 +115,48 @@
 
             let videoConstraints = {};
 
-            if (isSelfie) {
-                // Ön kamera: label'da front / user / ön geçen cihazı ara
-                let frontCam = videoDevices.find(d =>
-                    /front|user|ön/i.test(d.label)
-                );
-                if (frontCam) {
+            if (videoDevices.length) {
+                if (isSelfie) {
+                    // Ön kamera: label'da front / user / ön geçen cihazı ara
+                    let frontCam = videoDevices.find(d =>
+                        /front|user|ön/i.test(d.label)
+                    );
+
+                    // Label yoksa veya bulunamadıysa:
+                    if (!frontCam) {
+                        if (videoDevices.length === 2) {
+                            // 2 kamera varsa: 0=arka, 1=ön varsay
+                            frontCam = videoDevices[1];
+                        } else if (videoDevices.length > 2) {
+                            // Daha fazlaysa: son cihazı ön varsay
+                            frontCam = videoDevices[videoDevices.length - 1];
+                        } else {
+                            // Tek kamera varsa mecburen onu kullan
+                            frontCam = videoDevices[0];
+                        }
+                    }
+
                     videoConstraints = { deviceId: { exact: frontCam.deviceId } };
                 } else {
-                    // Yedek: facingMode user
-                    videoConstraints = { facingMode: "user" };
+                    // Arka kamera: label'da back / rear / environment / arka geçen cihazı ara
+                    let backCam = videoDevices.find(d =>
+                        /back|rear|environment|arka/i.test(d.label)
+                    );
+
+                    if (!backCam) {
+                        // Label yoksa/ bulunamadıysa:
+                        // 2 kamera varsa: 0=arka varsay
+                        // Daha fazlaysa: ilk cihazı arka varsay
+                        backCam = videoDevices[0];
+                    }
+
+                    videoConstraints = { deviceId: { exact: backCam.deviceId } };
                 }
             } else {
-                // Arka kamera: label'da back / rear / environment / arka geçen cihazı ara
-                let backCam = videoDevices.find(d =>
-                    /back|rear|environment|arka/i.test(d.label)
-                );
-                if (backCam) {
-                    videoConstraints = { deviceId: { exact: backCam.deviceId } };
-                } else {
-                    // Yedek: facingMode environment
-                    videoConstraints = { facingMode: "environment" };
-                }
+                // Cihaz listesi yoksa eski davranışa dön (facingMode hint)
+                videoConstraints = {
+                    facingMode: isSelfie ? "user" : "environment"
+                };
             }
 
             const constraints = {
