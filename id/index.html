@@ -1,10 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Copoint ID Capture – OpenCV Test Wizard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta name="description" content="Copoint ile kimliğinizi güvenle doğrulayın" />
+    <title>Identity Verification | Copoint</title>
 
+    <!-- İstersen statik assetlerini buradan verebilirsin -->
+    <link rel="icon" href="/static/assets/favicon.ico" />
+    <link rel="apple-touch-icon" href="/static/assets/apple-touch-icon.png" />
+    <link rel="manifest" href="/static/assets/manifest.json" />
+
+    <!-- Ortak CSS bundle (istersen ayrı dosyaya alabilirsin) -->
     <style>
         body {
             margin: 0;
@@ -14,881 +21,114 @@
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-        }
-
-        header {
-            padding: 12px 16px;
-            background: #020617;
-            border-bottom: 1px solid rgba(148,163,184,0.3);
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 12px;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 16px;
-            letter-spacing: 0.02em;
-        }
-
-        #status {
-            font-size: 12px;
-            color: #a5b4fc;
-        }
-
-        #main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 12px 16px 8px;
-            gap: 8px;
-            overflow-y: auto;
-        }
-
-        #step-indicator {
-            font-size: 13px;
-            color: #cbd5f5;
-        }
-
-        #video-container {
-            position: relative;
-            border-radius: 16px;
-            overflow: hidden;
-            background: radial-gradient(circle at top, #1d2333, #020617);
-            border: 1px solid rgba(148,163,184,0.5);
-            aspect-ratio: 3 / 4;
-            max-height: 60vh;
-        }
-
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        #overlay {
-            position: absolute;
-            inset: 0;
-            border-radius: 16px;
-            pointer-events: none;
-        }
-
-        /* Ortada kimlik için kılavuz çerçeve (ön/arka) */
-        #frame-guide {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 68%;
-            height: 42%;
-            transform: translate(-50%, -50%);
-            border-radius: 12px;
-            box-shadow:
-                0 0 0 999px rgba(15,23,42,0.72),
-                0 0 0 2px rgba(129,140,248,0.9);
-            outline: 1px dashed rgba(165,180,252,0.6);
-        }
-
-        /* Selfie adımında dairesel kılavuz */
-        #selfie-circle {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 62%;
-            height: 62%;
-            transform: translate(-50%, -50%);
-            border-radius: 999px;
-            box-shadow:
-                0 0 0 999px rgba(15,23,42,0.72),
-                0 0 0 2px rgba(129,140,248,0.9);
-            outline: 1px dashed rgba(165,180,252,0.6);
-            display: none;
-        }
-
-        #hint {
-            position: absolute;
-            left: 50%;
-            bottom: 12px;
-            transform: translateX(-50%);
-            font-size: 12px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: rgba(15,23,42,0.88);
-            color: #e5e7eb;
-            border: 1px solid rgba(129,140,248,0.6);
-            backdrop-filter: blur(8px);
-            max-width: 90%;
-            text-align: center;
-        }
-
-        /* Algılanan kart için debug dikdörtgeni */
-        #debug-rect {
-            position: absolute;
-            border: 2px solid rgba(52,211,153,0.9);
-            border-radius: 8px;
-            pointer-events: none;
-            display: none;
-        }
-
-        #controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-        }
-
-        button {
-            border-radius: 999px;
-            border: 1px solid rgba(148,163,184,0.8);
-            background: #020617;
-            color: #e5e7eb;
-            font-size: 12px;
-            padding: 6px 10px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        button:disabled {
-            opacity: 0.4;
-            cursor: default;
-        }
-
-        button:not(:disabled):hover {
-            background: radial-gradient(circle at top left, #1d2333, #020617);
-            border-color: rgba(129,140,248,0.9);
-        }
-
-        #step-summary {
-            margin-top: 8px;
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px dashed rgba(148,163,184,0.5);
-            font-size: 12px;
-            color: #9ca3af;
-        }
-
-        #previews {
-            margin-top: 8px;
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 6px;
-        }
-
-        .preview-card {
-            border-radius: 10px;
-            border: 1px solid rgba(148,163,184,0.4);
-            overflow: hidden;
-            background: #020617;
-            font-size: 11px;
-        }
-
-        .preview-card img {
-            width: 100%;
-            display: block;
-        }
-
-        .preview-card div {
-            padding: 4px 6px 6px;
-            color: #9ca3af;
-        }
-
-        #submit-btn {
-            margin-top: 6px;
-        }
-
-        #test-panel {
-            margin: 12px 16px 0;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(148,163,184,0.4);
-            background: #020617;
-            font-size: 12px;
-        }
-
-        #test-panel h2 {
-            margin: 0 0 6px;
-            font-size: 13px;
-            color: #e5e7eb;
-        }
-
-        .test-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px 16px;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        #test-panel label {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        #test-panel input[type="number"] {
-            width: 80px;
-            padding: 2px 4px;
-            border-radius: 6px;
-            border: 1px solid rgba(148,163,184,0.5);
-            background: #020617;
-            color: #e5e7eb;
-        }
-
-        #test-panel input[type="file"] {
-            font-size: 11px;
-        }
-
-        #debug-info {
-            margin: 0;
-            padding: 6px 8px;
-            border-radius: 8px;
-            background: #020617;
-            border: 1px dashed rgba(148,163,184,0.4);
-            font-size: 11px;
-            color: #9ca3af;
-            max-height: 140px;
-            overflow: auto;
-            white-space: pre-wrap;
-        }
-
-        #process-canvas,
-        #capture-canvas {
-            display: none;
+            min-height: 100vh;
         }
     </style>
-
-    <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
 </head>
 <body>
-<header>
-    <h1>Copoint ID Capture</h1>
-    <div id="status">OpenCV yükleniyor…</div>
-</header>
+<noscript>Bu uygulamayı kullanmak için JavaScript'i etkinleştirmeniz gerekiyor.</noscript>
 
-<div id="main">
-    <div id="step-indicator">Adım 1 / 3 – Kimlik ön yüz</div>
+<!-- Stripe örneğindeki gibi root + data-config -->
+<div
+    id="root"
+    data-config='{
+      "API_HOST": "https://identity.copoint.id",
+      "UPLOAD_HOST": "https://files.copoint.id",
+      "DASHBOARD_HOST": "https://dashboard.copoint.id",
+      "STATIC_CDN_PREFIX": "https://cdn.copoint.id/assets",
+      "ENV": "sandbox",
+      "COMMIT_HASH": "dev-test-001"
+    }'
+>
+    <!-- Tüm UI root içinde, JS sadece davranışı kontrol ediyor -->
+    <header style="padding:12px 16px;background:#020617;border-bottom:1px solid rgba(148,163,184,0.3);display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
+        <h1 style="margin:0;font-size:16px;letter-spacing:0.02em;">Copoint ID Capture</h1>
+        <div id="status" style="font-size:12px;color:#a5b4fc;">OpenCV yükleniyor…</div>
+    </header>
 
-    <div id="video-container">
-        <video id="video" autoplay playsinline></video>
-        <div id="overlay">
-            <div id="frame-guide"></div>
-            <div id="selfie-circle"></div>
-            <div id="hint">Kimliği çerçevenin içine yerleştir, sabit tut. Netleşince otomatik fotoğraf alınacak.</div>
-            <div id="debug-rect"></div>
+    <div id="main" style="flex:1;display:flex;flex-direction:column;padding:12px 16px 8px;gap:8px;overflow-y:auto;">
+        <div id="step-indicator" style="font-size:13px;color:#cbd5f5;">Adım 1 / 3 – Kimlik ön yüz</div>
+
+        <div id="video-container" style="position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(circle at top,#1d2333,#020617);border:1px solid rgba(148,163,184,0.5);aspect-ratio:3/4;max-height:60vh;">
+            <video id="video" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+            <div id="overlay" style="position:absolute;inset:0;border-radius:16px;pointer-events:none;">
+                <div id="frame-guide" style="position:absolute;left:50%;top:50%;width:68%;height:42%;transform:translate(-50%,-50%);border-radius:12px;box-shadow:0 0 0 999px rgba(15,23,42,0.72),0 0 0 2px rgba(129,140,248,0.9);outline:1px dashed rgba(165,180,252,0.6);"></div>
+                <div id="selfie-circle" style="position:absolute;left:50%;top:50%;width:62%;height:62%;transform:translate(-50%,-50%);border-radius:999px;box-shadow:0 0 0 999px rgba(15,23,42,0.72),0 0 0 2px rgba(129,140,248,0.9);outline:1px dashed rgba(165,180,252,0.6);display:none;"></div>
+                <div id="hint" style="position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font-size:12px;padding:6px 10px;border-radius:999px;background:rgba(15,23,42,0.88);color:#e5e7eb;border:1px solid rgba(129,140,248,0.6);backdrop-filter:blur(8px);max-width:90%;text-align:center;">
+                    Kimliği çerçevenin içine yerleştir, sabit tut. Netleşince otomatik fotoğraf alınacak.
+                </div>
+                <div id="debug-rect" style="position:absolute;border:2px solid rgba(52,211,153,0.9);border-radius:8px;pointer-events:none;display:none;"></div>
+            </div>
         </div>
+
+        <div id="controls" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <button id="restart-btn" disabled>Bu adımı yeniden çek</button>
+            <button id="manual-btn" disabled>Manuel çek</button>
+            <button id="next-step-btn" disabled>Sonraki adıma geç</button>
+        </div>
+
+        <div id="step-summary" style="margin-top:8px;padding:8px 10px;border-radius:10px;border:1px dashed rgba(148,163,184,0.5);font-size:12px;color:#9ca3af;">
+            <strong>Adımlar:</strong>
+            <div>1) Kimlik ön yüz – otomatik kare algılama ve blur kontrolü</div>
+            <div>2) Kimlik arka yüz – aynı algoritma</div>
+            <div>3) Selfie – manuel çekim</div>
+        </div>
+
+        <div id="previews" style="margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;">
+            <div class="preview-card" style="border-radius:10px;border:1px solid rgba(148,163,184,0.4);overflow:hidden;background:#020617;font-size:11px;">
+                <img id="preview-front" alt="Ön yüz" style="width:100%;display:block;" />
+                <div style="padding:4px 6px 6px;color:#9ca3af;">Kimlik Ön Yüz</div>
+            </div>
+            <div class="preview-card" style="border-radius:10px;border:1px solid rgba(148,163,184,0.4);overflow:hidden;background:#020617;font-size:11px;">
+                <img id="preview-back" alt="Arka yüz" style="width:100%;display:block;" />
+                <div style="padding:4px 6px 6px;color:#9ca3af;">Kimlik Arka Yüz</div>
+            </div>
+            <div class="preview-card" style="border-radius:10px;border:1px solid rgba(148,163,184,0.4);overflow:hidden;background:#020617;font-size:11px;">
+                <img id="preview-selfie" alt="Selfie" style="width:100%;display:block;" />
+                <div style="padding:4px 6px 6px;color:#9ca3af;">Selfie</div>
+            </div>
+        </div>
+
+        <button id="submit-btn" disabled style="margin-top:6px;">Hepsini gönder (TEST)</button>
     </div>
 
-    <div id="controls">
-        <button id="restart-btn" disabled>Bu adımı yeniden çek</button>
-        <button id="manual-btn" disabled>Manuel çek</button>
-        <button id="next-step-btn" disabled>Sonraki adıma geç</button>
-    </div>
-
-    <div id="step-summary">
-        <strong>Adımlar:</strong>
-        <div>1) Kimlik ön yüz – otomatik kare algılama ve blur kontrolü</div>
-        <div>2) Kimlik arka yüz – aynı algoritma</div>
-        <div>3) Selfie – manuel çekim</div>
-    </div>
-
-    <div id="previews">
-        <div class="preview-card">
-            <img id="preview-front" alt="Ön yüz" />
-            <div>Kimlik Ön Yüz</div>
+    <section id="test-panel" style="margin:12px 16px 16px;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,0.4);background:#020617;font-size:12px;">
+        <h2 style="margin:0 0 6px;font-size:13px;color:#e5e7eb;">Test Paneli</h2>
+        <div class="test-row" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:6px;">
+            <label style="display:flex;align-items:center;gap:4px;">
+                <input type="checkbox" id="debug-toggle">
+                Debug modu
+            </label>
+            <label style="display:flex;align-items:center;gap:4px;">
+                <input type="checkbox" id="fake-camera-toggle">
+                Fake kamera (görsel yükle)
+            </label>
+            <input type="file" id="test-image-input" accept="image/*" disabled style="font-size:11px;">
         </div>
-        <div class="preview-card">
-            <img id="preview-back" alt="Arka yüz" />
-            <div>Kimlik Arka Yüz</div>
+        <div class="test-row" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:6px;">
+            <label style="display:flex;align-items:center;gap:4px;">
+                Blur eşiği
+                <input type="number" id="blur-threshold" value="80" min="0" max="500" style="width:80px;padding:2px 4px;border-radius:6px;border:1px solid rgba(148,163,184,0.5);background:#020617;color:#e5e7eb;">
+            </label>
+            <label style="display:flex;align-items:center;gap:4px;">
+                Gerekli stabil frame
+                <input type="number" id="stable-frames" value="8" min="1" max="60" style="width:80px;padding:2px 4px;border-radius:6px;border:1px solid rgba(148,163,184,0.5);background:#020617;color:#e5e7eb;">
+            </label>
+            <label style="display:flex;align-items:center;gap:4px;">
+                Min kart alan oranı
+                <input type="number" id="min-area" value="0.15" step="0.01" min="0.01" max="0.9" style="width:80px;padding:2px 4px;border-radius:6px;border:1px solid rgba(148,163,184,0.5);background:#020617;color:#e5e7eb;">
+            </label>
         </div>
-        <div class="preview-card">
-            <img id="preview-selfie" alt="Selfie" />
-            <div>Selfie</div>
-        </div>
-    </div>
+        <pre id="debug-info" style="margin:0;padding:6px 8px;border-radius:8px;background:#020617;border:1px dashed rgba(148,163,184,0.4);font-size:11px;color:#9ca3af;max-height:140px;overflow:auto;white-space:pre-wrap;"></pre>
+    </section>
 
-    <button id="submit-btn" disabled>Hepsini gönder</button>
+    <!-- İşleme için canvas'lar -->
+    <canvas id="process-canvas" style="display:none;"></canvas>
+    <canvas id="capture-canvas" style="display:none;"></canvas>
 </div>
 
-<section id="test-panel">
-    <h2>Test Paneli</h2>
-    <div class="test-row">
-        <label>
-            <input type="checkbox" id="debug-toggle">
-            Debug modu
-        </label>
-        <label>
-            <input type="checkbox" id="fake-camera-toggle">
-            Fake kamera (görsel yükle)
-        </label>
-        <input type="file" id="test-image-input" accept="image/*" disabled>
-    </div>
-    <div class="test-row">
-        <label>
-            Blur eşiği
-            <input type="number" id="blur-threshold" value="80" min="0" max="500">
-        </label>
-        <label>
-            Gerekli stabil frame
-            <input type="number" id="stable-frames" value="8" min="1" max="60">
-        </label>
-        <label>
-            Min kart alan oranı
-            <input type="number" id="min-area" value="0.15" step="0.01" min="0.01" max="0.9">
-        </label>
-    </div>
-    <pre id="debug-info"></pre>
-</section>
-
-<!-- İşleme için canvas'lar -->
-<canvas id="process-canvas"></canvas>
-<canvas id="capture-canvas"></canvas>
-
-<script>
-    const video = document.getElementById("video");
-    const statusEl = document.getElementById("status");
-    const stepIndicator = document.getElementById("step-indicator");
-    const hintEl = document.getElementById("hint");
-    const frameGuide = document.getElementById("frame-guide");
-    const selfieCircle = document.getElementById("selfie-circle");
-
-    const processCanvas = document.getElementById("process-canvas");
-    const processCtx = processCanvas.getContext("2d");
-    const captureCanvas = document.getElementById("capture-canvas");
-    const captureCtx = captureCanvas.getContext("2d");
-
-    const debugRect = document.getElementById("debug-rect");
-
-    const debugToggle = document.getElementById("debug-toggle");
-    const fakeCameraToggle = document.getElementById("fake-camera-toggle");
-    const blurInput = document.getElementById("blur-threshold");
-    const stableInput = document.getElementById("stable-frames");
-    const minAreaInput = document.getElementById("min-area");
-    const debugInfo = document.getElementById("debug-info");
-    const testImageInput = document.getElementById("test-image-input");
-
-    const restartBtn = document.getElementById("restart-btn");
-    const manualBtn = document.getElementById("manual-btn");
-    const nextStepBtn = document.getElementById("next-step-btn");
-    const submitBtn = document.getElementById("submit-btn");
-
-    const previewFront = document.getElementById("preview-front");
-    const previewBack = document.getElementById("preview-back");
-    const previewSelfie = document.getElementById("preview-selfie");
-
-    let stream = null;
-    let processing = false;
-    let captured = false;
-    let cvReady = false;
-
-    // Wizard state
-    const steps = ["id_front", "id_back", "selfie"];
-    let currentStepIndex = 0;
-    let frontImage = null;
-    let backImage = null;
-    let selfieImage = null;
-
-    // Stabilite için basit state (ön/arka)
-    let stableFrames = 0;
-    let REQUIRED_STABLE_FRAMES = 8;
-    let BLUR_THRESHOLD = 80.0;
-    let MIN_CARD_AREA_RATIO = 0.15;
-
-    let DEBUG_MODE = false;
-    let USE_FAKE_CAMERA = false;
-    let testImage = null;
-
-    let lastRect = null;
-
-    function updateUIForStep() {
-        const step = steps[currentStepIndex];
-        const titles = {
-            "id_front": "Adım 1 / 3 – Kimlik ön yüz",
-            "id_back": "Adım 2 / 3 – Kimlik arka yüz",
-            "selfie": "Adım 3 / 3 – Selfie"
-        };
-
-        const hints = {
-            "id_front": "Kimliğin ön yüzünü çerçevenin içine yerleştir, sabit tut.",
-            "id_back": "Kimliğin arka yüzünü çerçevenin içine yerleştir, sabit tut.",
-            "selfie": "Yüzünü dairenin içine al, iyi aydınlatılmış bir ortamda dur."
-        };
-
-        stepIndicator.textContent = titles[step];
-        hintEl.textContent = hints[step];
-
-        const isSelfie = step === "selfie";
-        frameGuide.style.display = isSelfie ? "none" : "block";
-        selfieCircle.style.display = isSelfie ? "block" : "none";
-
-        manualBtn.disabled = !cvReady;
-        restartBtn.disabled = true;
-        nextStepBtn.disabled = !captured;
-
-        if (isSelfie) {
-            statusEl.textContent = "Selfie adımı – yüzünü kadraja al.";
-        } else {
-            statusEl.textContent = "Kamerayı kimliğe doğrultun…";
-        }
-    }
-
-    function setupCanvasSize() {
-        const width = video.videoWidth || 720;
-        const height = video.videoHeight || 960;
-        processCanvas.width = width;
-        processCanvas.height = height;
-        captureCanvas.width = width;
-        captureCanvas.height = height;
-    }
-
-    async function initCamera() {
-        try {
-            const step = steps[currentStepIndex];
-            const isSelfie = step === "selfie";
-
-            const constraints = {
-                video: {
-                    facingMode: isSelfie ? "user" : "environment"
-                },
-                audio: false
-            };
-
-            // Eski stream varsa durdur
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-            }
-
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
-
-            video.onloadedmetadata = () => {
-                setupCanvasSize();
-                captured = false;
-                updateUIForStep();
-                startProcessingLoop();
-            };
-        } catch (err) {
-            console.error(err);
-            statusEl.textContent = "Kamera erişimi başarısız oldu.";
-        }
-    }
-
-    function startProcessingLoop() {
-        if (processing || !cvReady) return;
-        processing = true;
-        captured = false;
-        stableFrames = 0;
-        lastRect = null;
-        hideDebugRect();
-
-        const FPS = 12;
-        const interval = 1000 / FPS;
-
-        const loop = () => {
-            if (!processing) return;
-            processFrame();
-            setTimeout(loop, interval);
-        };
-        loop();
-    }
-
-    function processFrame() {
-        if (captured) return;
-
-        const step = steps[currentStepIndex];
-
-        // Selfie adımında OpenCV ile auto-capture yok, manuel
-        if (step === "selfie") {
-            return;
-        }
-
-        if (USE_FAKE_CAMERA) {
-            if (!testImage || !testImage.width || !testImage.height) return;
-            processCtx.drawImage(testImage, 0, 0, processCanvas.width, processCanvas.height);
-        } else {
-            if (!video.videoWidth || !video.videoHeight) return;
-            processCtx.drawImage(video, 0, 0, processCanvas.width, processCanvas.height);
-        }
-
-        const frame = processCtx.getImageData(0, 0, processCanvas.width, processCanvas.height);
-
-        let src = cv.matFromImageData(frame);
-        let gray = new cv.Mat();
-        let blurred = new cv.Mat();
-        let edges = new cv.Mat();
-
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-        cv.Canny(blurred, edges, 50, 150);
-
-        let lap = new cv.Mat();
-        cv.Laplacian(gray, lap, cv.CV_64F);
-        const blurScore = lapVariance(lap);
-
-        let contours = new cv.MatVector();
-        let hierarchy = new cv.Mat();
-        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-        const bestRect = findBestCardRect(contours, src.cols, src.rows);
-
-        src.delete();
-        gray.delete();
-        blurred.delete();
-        edges.delete();
-        lap.delete();
-        contours.delete();
-        hierarchy.delete();
-
-        if (bestRect) {
-            const { x, y, w, h } = bestRect;
-            drawDebugRect(x, y, w, h);
-            const areaRatio = (w * h) / (processCanvas.width * processCanvas.height);
-
-            const stable = isStable(bestRect);
-            const blurOk = blurScore >= BLUR_THRESHOLD;
-            const areaOk = areaRatio >= MIN_CARD_AREA_RATIO;
-
-            if (DEBUG_MODE && debugInfo) {
-                const lines = [
-                    `Adım: ${step}`,
-                    `Blur skoru: ${blurScore.toFixed(2)} (eşik: ${BLUR_THRESHOLD})`,
-                    `Alan oranı: ${(areaRatio * 100).toFixed(1)}% (min: ${(MIN_CARD_AREA_RATIO * 100).toFixed(1)}%)`,
-                    `Stabil frame: ${stableFrames}/${REQUIRED_STABLE_FRAMES}`,
-                    `Stable? ${stable ? "Evet" : "Hayır"}`,
-                    `Blur OK? ${blurOk ? "Evet" : "Hayır"}`,
-                    `Alan OK? ${areaOk ? "Evet" : "Hayır"}`,
-                    `Kaynak: ${USE_FAKE_CAMERA ? "Fake görüntü" : "Kamera"}`
-                ];
-                debugInfo.textContent = lines.join("\n");
-            }
-
-            if (stable && blurOk && areaOk) {
-                stableFrames++;
-                statusEl.textContent = `Kimlik algılandı, sabit bekleniyor… (${stableFrames}/${REQUIRED_STABLE_FRAMES})`;
-            } else {
-                stableFrames = 0;
-                statusEl.textContent = `Kimlik arıyor… (Netlik: ${blurScore.toFixed(0)})`;
-            }
-
-            if (stableFrames >= REQUIRED_STABLE_FRAMES) {
-                autoCapture(bestRect);
-            }
-        } else {
-            hideDebugRect();
-            stableFrames = 0;
-            statusEl.textContent = `Kimlik arıyor…`;
-        }
-    }
-
-    function lapVariance(mat) {
-        let data = mat.data64F;
-        if (!data || data.length === 0) return 0.0;
-
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) sum += data[i];
-        const mean = sum / data.length;
-
-        let sqDiff = 0;
-        for (let i = 0; i < data.length; i++) {
-            const diff = data[i] - mean;
-            sqDiff += diff * diff;
-        }
-        return sqDiff / data.length;
-    }
-
-    function findBestCardRect(contours, width, height) {
-        let best = null;
-        let bestArea = 0;
-
-        for (let i = 0; i < contours.size(); i++) {
-            const cnt = contours.get(i);
-            const area = cv.contourArea(cnt);
-            if (area < (width * height * 0.05)) continue;
-
-            const peri = cv.arcLength(cnt, true);
-            const approx = new cv.Mat();
-            cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-
-            if (approx.rows === 4) {
-                const rect = cv.boundingRect(approx);
-                const { width: w, height: h } = rect;
-                const ratio = w / h;
-
-                if (ratio < 1.3 || ratio > 1.9) {
-                    approx.delete();
-                    continue;
-                }
-
-                if (area > bestArea) {
-                    best = rect;
-                    bestArea = area;
-                }
-            }
-        }
-
-        return best;
-    }
-
-    function drawDebugRect(x, y, w, h) {
-        debugRect.style.display = "block";
-        debugRect.style.left = `${(x / processCanvas.width) * 100}%`;
-        debugRect.style.top = `${(y / processCanvas.height) * 100}%`;
-        debugRect.style.width = `${(w / processCanvas.width) * 100}%`;
-        debugRect.style.height = `${(h / processCanvas.height) * 100}%`;
-    }
-
-    function hideDebugRect() {
-        debugRect.style.display = "none";
-    }
-
-    function isStable(rect) {
-        if (!lastRect) {
-            lastRect = rect;
-            return false;
-        }
-
-        const dx = Math.abs(rect.x - lastRect.x);
-        const dy = Math.abs(rect.y - lastRect.y);
-        const dw = Math.abs(rect.width - lastRect.width);
-        const dh = Math.abs(rect.height - lastRect.height);
-
-        const tolPos = 6;
-        const tolSize = 8;
-
-        const stable = dx < tolPos && dy < tolPos && dw < tolSize && dh < tolSize;
-        lastRect = rect;
-        return stable;
-    }
-
-    function autoCapture(rect) {
-        captured = true;
-        processing = false;
-        stableFrames = 0;
-
-        const { x, y, width: w, height: h } = rect;
-
-        captureCtx.drawImage(processCanvas, 0, 0);
-        const crop = captureCtx.getImageData(x, y, w, h);
-        captureCanvas.width = w;
-        captureCanvas.height = h;
-        captureCtx.putImageData(crop, 0, 0);
-
-        const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.92);
-        const step = steps[currentStepIndex];
-
-        if (step === "id_front") {
-            frontImage = dataUrl;
-            previewFront.src = dataUrl;
-        } else if (step === "id_back") {
-            backImage = dataUrl;
-            previewBack.src = dataUrl;
-        }
-
-        statusEl.textContent = "Fotoğraf yakalandı. Gerekirse yeniden çekebilirsiniz.";
-        restartBtn.disabled = false;
-        nextStepBtn.disabled = false;
-    }
-
-    function manualCapture() {
-        const step = steps[currentStepIndex];
-
-        if (step === "selfie") {
-            setupCanvasSize();
-            captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-            const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.92);
-            selfieImage = dataUrl;
-            previewSelfie.src = dataUrl;
-            captured = true;
-            restartBtn.disabled = false;
-            nextStepBtn.disabled = false;
-            statusEl.textContent = "Selfie çekildi.";
-            return;
-        }
-
-        // Ön/arka için manuel yakalama
-        setupCanvasSize();
-        captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.92);
-        const current = steps[currentStepIndex];
-
-        if (current === "id_front") {
-            frontImage = dataUrl;
-            previewFront.src = dataUrl;
-        } else if (current === "id_back") {
-            backImage = dataUrl;
-            previewBack.src = dataUrl;
-        }
-
-        captured = true;
-        restartBtn.disabled = false;
-        nextStepBtn.disabled = false;
-        statusEl.textContent = "Manuel fotoğraf çekildi.";
-    }
-
-    function resetCurrentStep() {
-        const step = steps[currentStepIndex];
-
-        if (step === "id_front") {
-            frontImage = null;
-            previewFront.src = "";
-        } else if (step === "id_back") {
-            backImage = null;
-            previewBack.src = "";
-        } else if (step === "selfie") {
-            selfieImage = null;
-            previewSelfie.src = "";
-        }
-
-        captured = false;
-        restartBtn.disabled = true;
-        nextStepBtn.disabled = true;
-        stableFrames = 0;
-        statusEl.textContent = "Bu adımı yeniden çekebilirsiniz.";
-        processing = false;
-        hideDebugRect();
-        startProcessingLoop();
-    }
-
-    function goToNextStep() {
-        if (currentStepIndex < steps.length - 1) {
-            currentStepIndex++;
-            processing = false;
-            captured = false;
-            stableFrames = 0;
-            hideDebugRect();
-            updateUIForStep();
-            if (!USE_FAKE_CAMERA) {
-                initCamera();   // kamera burada ön/arka olarak yeniden seçiliyor
-            } else {
-                setupCanvasSize();
-                captured = false;
-                startProcessingLoop();
-            }
-        }
-    }
-
-    async function submitAll() {
-        if (!frontImage || !backImage || !selfieImage) return;
-
-        const payload = {
-            id_front: frontImage,
-            id_back: backImage,
-            selfie: selfieImage
-        };
-
-        console.log("SUBMIT PAYLOAD (test mod, backend yok):", payload);
-
-        statusEl.textContent = "Test mod: payload console.log ile yazdırıldı. Backend entegrasyonu devre dışı.";
-        alert("Test mod: Payload console.log içinde. Backend'e gönderilmiyor.");
-    }
-
-    function onOpenCvReady() {
-        cvReady = true;
-        statusEl.textContent = "OpenCV hazır. Kamera açılıyor…";
-        if (!USE_FAKE_CAMERA) {
-            initCamera();
-        } else {
-            setupCanvasSize();
-            captured = false;
-            updateUIForStep();
-            startProcessingLoop();
-        }
-    }
-
-    if (typeof cv !== "undefined") {
-        cv["onRuntimeInitialized"] = onOpenCvReady;
-    } else {
-        window.Module = {
-            onRuntimeInitialized: onOpenCvReady
-        };
-    }
-
-    // Event binding
-    restartBtn.addEventListener("click", resetCurrentStep);
-    manualBtn.addEventListener("click", manualCapture);
-    nextStepBtn.addEventListener("click", goToNextStep);
-    submitBtn.addEventListener("click", submitAll);
-
-    // Test panel event handlers
-    if (debugToggle) {
-        debugToggle.addEventListener("change", (e) => {
-            DEBUG_MODE = e.target.checked;
-            if (!DEBUG_MODE) {
-                debugInfo.textContent = "";
-            }
-        });
-    }
-
-    if (blurInput) {
-        blurInput.addEventListener("change", (e) => {
-            const v = parseFloat(e.target.value);
-            if (!isNaN(v)) BLUR_THRESHOLD = v;
-        });
-    }
-
-    if (stableInput) {
-        stableInput.addEventListener("change", (e) => {
-            const v = parseInt(e.target.value, 10);
-            if (!isNaN(v) && v > 0) REQUIRED_STABLE_FRAMES = v;
-        });
-    }
-
-    if (minAreaInput) {
-        minAreaInput.addEventListener("change", (e) => {
-            const v = parseFloat(e.target.value);
-            if (!isNaN(v) && v > 0 && v < 1) MIN_CARD_AREA_RATIO = v;
-        });
-    }
-
-    if (fakeCameraToggle) {
-        fakeCameraToggle.addEventListener("change", (e) => {
-            USE_FAKE_CAMERA = e.target.checked;
-            if (USE_FAKE_CAMERA) {
-                if (testImageInput) {
-                    testImageInput.disabled = false;
-                }
-                // Fake modda mevcut kamerayı kapat
-                if (stream) {
-                    stream.getTracks().forEach(t => t.stop());
-                    stream = null;
-                }
-                setupCanvasSize();
-                captured = false;
-                startProcessingLoop();
-            } else {
-                if (testImageInput) {
-                    testImageInput.disabled = true;
-                }
-                testImage = null;
-                captured = false;
-                processing = false;
-                hideDebugRect();
-                // Normal moda dön: mevcut adım için kamerayı yeniden aç
-                if (cvReady) {
-                    initCamera();
-                }
-            }
-        });
-    }
-
-    if (testImageInput) {
-        testImageInput.addEventListener("change", (e) => {
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            const img = new Image();
-            img.onload = () => {
-                testImage = img;
-                setupCanvasSize();
-                captured = false;
-                if (cvReady && USE_FAKE_CAMERA) {
-                    startProcessingLoop();
-                }
-            };
-            img.src = URL.createObjectURL(file);
-        });
-    }
-</script>
+<!-- OpenCV ve ana bundle'lar (Stripe tarzı) -->
+<script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
+<script src="/static/js/main.js"></script>
 </body>
 </html>
