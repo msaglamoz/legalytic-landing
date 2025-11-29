@@ -77,17 +77,17 @@
         }
 
         /* Ortada kimlik için kılavuz çerçeve (ön/arka) */
-        #frame-guide {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 70%;
-            height: 42%;
-            transform: translate(-50%, -50%);
-            border-radius: 16px;
-            border: 2px dashed rgba(148,163,184,0.7);
-            box-shadow: 0 0 0 9999px rgba(15,23,42,0.65);
-        }
+		#frame-guide {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 90%;          /* %70 → %90 : yatayda daha geniş */
+			height: 60%;         /* %42 → %60 : dikeyde daha geniş */
+			transform: translate(-50%, -50%);
+			border-radius: 18px;
+			border: 3px dashed rgba(148,163,184,0.9);   /* biraz daha kalın ve belirgin */
+			box-shadow: 0 0 0 9999px rgba(15,23,42,0.6);
+		}
 
         /* Selfie modunda yüz çemberi */
         #selfie-circle {
