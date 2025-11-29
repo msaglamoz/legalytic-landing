@@ -219,12 +219,15 @@
 
     <div id="preview-wrapper">
         <div class="preview-card">
+            <img id="preview-front"/>
             <div>Ön yüz</div>
         </div>
         <div class="preview-card">
+            <img id="preview-back"/>
             <div>Arka yüz</div>
         </div>
         <div class="preview-card">
+            <img id="preview-selfie" />
             <div>Selfie</div>
         </div>
     </div>
@@ -260,6 +263,9 @@
     const nextStepBtn = document.getElementById("next-step-btn");
     const submitBtn = document.getElementById("submit-btn");
 
+    const previewFront = document.getElementById("preview-front");
+    const previewBack = document.getElementById("preview-back");
+    const previewSelfie = document.getElementById("preview-selfie");
 
     let stream = null;
     let processing = false;
