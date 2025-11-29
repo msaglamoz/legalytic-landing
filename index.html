@@ -1,564 +1,233 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Auto ID Capture Demo</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- Basit stil -->
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #020817;
-            color: #e5e7eb;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        header {
-            padding: 12px 16px;
-            background: #020617;
-            border-bottom: 1px solid rgba(148,163,184,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        header h1 {
-            font-size: 16px;
-            margin: 0;
-        }
-
-        #status {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        #main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            gap: 8px;
-        }
-
-        #video-container {
-            position: relative;
-            max-width: 480px;
-            width: 100%;
-            aspect-ratio: 3/4;
-            border-radius: 16px;
-            overflow: hidden;
-            background: #020617;
-            box-shadow: 0 18px 45px rgba(15,23,42,0.9);
-        }
-
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1); /* selfie modu hissini engellemek için istersen kaldır */
-        }
-
-        #overlay {
-            position: absolute;
-            inset: 0;
-            border-radius: 16px;
-            pointer-events: none;
-        }
-
-        /* Ortada kimlik için kılavuz çerçeve */
-        #frame-guide {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 70%;
-            height: 42%; /* ID kart oranına yakın 85.6x54mm => ~1.585 */
-            transform: translate(-50%, -50%);
-            border-radius: 16px;
-            border: 2px dashed rgba(148,163,184,0.7);
-            box-shadow: 0 0 0 9999px rgba(15,23,42,0.65);
-        }
-
-        #hint {
-            position: absolute;
-            bottom: 12px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            text-align: center;
-            background: rgba(15,23,42,0.7);
-            padding: 4px 10px;
-            border-radius: 999px;
-            backdrop-filter: blur(10px);
-        }
-
-        #debug-rect {
-            position: absolute;
-            border: 2px solid rgba(34,197,94,0.9);
-            border-radius: 10px;
-            pointer-events: none;
-            display: none;
-        }
-
-        #controls {
-            display: flex;
-            gap: 8px;
-            font-size: 12px;
-            opacity: 0.9;
-        }
-
-        button {
-            border-radius: 999px;
-            border: 1px solid rgba(148,163,184,0.4);
-            background: #020617;
-            color: #e5e7eb;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        button:hover {
-            background: #0f172a;
-        }
-
-        #preview {
-            max-width: 480px;
-            width: 100%;
-            margin-top: 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(148,163,184,0.3);
-            display: none;
-        }
-
-        #preview img {
-            width: 100%;
-            display: block;
-            border-radius: 12px;
-        }
-
-        #preview-caption {
-            font-size: 12px;
-            padding: 4px 8px 8px;
-            color: #9ca3af;
-        }
-
-        /* Canvas görünmesin */
-        #process-canvas,
-        #capture-canvas {
-            display: none;
-        }
-    </style>
-
-    <!-- OpenCV.js (CDN) -->
-    <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <meta charset="UTF-8" />
+  <meta name="description" content="Legalytic is an AI-powered semantic engine for understanding legal documents. LAaS – Legal Analysis as a Service." />
+  <meta name="keywords" content="Legal AI, Contract Analysis, Risk Scoring, Clause Detection, Legal Analysis as a Service, LAaS" />
+  <meta name="author" content="ThinkPoint OÜ" />
+  <meta property="og:title" content="Legalytic – AI Manifest" />
+  <meta property="og:description" content="Legalytic introduces LAaS: Legal Analysis as a Service. Understand what you sign." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://legalytic.ai" />
+  <meta property="og:image" content="/og-image.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legalytic – AI Manifest</title>
+  <style>
+    code { color: #79c0ff; background: none; }
+    .highlight { color: #56d364; }
+    body {
+      background-color: #0d1117;
+      color: #c9d1d9;
+      font-family: monospace;
+      white-space: pre-wrap;
+      padding: 2rem;
+      font-size: 15px;
+    }
+    .cursor {
+      display: inline-block;
+      width: 10px;
+      background: #58a6ff;
+      animation: blink 1s step-start 0s infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+    .ascii-logo {
+      color: #58a6ff;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+  </style>
 </head>
 <body>
-<header>
-    <h1>Browser ID Auto Capture</h1>
-    <div id="status">OpenCV yükleniyor…</div>
+<span class="ascii-logo">                                            
+</span>
+<script>
+  // Simulated AI system startup intro effect
+  document.addEventListener('DOMContentLoaded', () => {
+    const introLines = [
+      '> booting Legalytic v1.0.0...',
+      '> scanning core memory...',
+      '> loading LAaS protocol...',
+      '> READY',
+      ''
+    ];
+    const terminal = document.body;
+    const insertBefore = terminal.querySelector('.ascii-logo');
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    (async () => {
+      for (let line of introLines) {
+        const pre = document.createElement('div');
+        pre.textContent = line;
+        terminal.insertBefore(pre, insertBefore);
+        await delay(600);
+      }
+    })();
+  });
+</script>
+<header style="margin-bottom: 2rem; text-align: left;">
+  <h1 style="font-size: 2rem; color: #58a6ff; margin: 0;">Legalytic AI</h1>
+  <p style="font-size: 1rem; margin: 0.5rem 0 1.5rem; color: #8b949e;">Understand what you sign. In seconds.</p>
 </header>
 
-<div id="main">
-    <div id="video-container">
-        <video id="video" autoplay playsinline></video>
-        <div id="overlay">
-            <div id="frame-guide"></div>
-            <div id="hint">Kimliği çerçevenin içine yerleştir, sabit tut. Netleşince otomatik fotoğraf alınacak.</div>
-            <div id="debug-rect"></div>
-        </div>
-    </div>
 
-    <div id="controls">
-        <button id="restart-btn" disabled>Yeniden dene</button>
-        <button id="manual-btn" disabled>Manuel çek</button>
-    </div>
+Legalytic – Legal Analysis as a Service
+========================================
 
-    <div id="preview">
-        <img id="preview-img" alt="Captured ID" />
-        <div id="preview-caption">Yakalanan kare</div>
-    </div>
-</div>
+Version: v1.0.0-alpha
+Updated: 2025-05-19
 
-<!-- İşleme için canvas'lar -->
-<canvas id="process-canvas"></canvas>
-<canvas id="capture-canvas"></canvas>
+[ai@legalytic ~]$ ./manifest --read
 
+Manifesto
+---------
+(Conceptualized and authored by Mahir Sağlamöz – Founder of ThinkPoint [LinkedIn](https://www.linkedin.com/in/mahirsaglamoz))
+
+We believe the language of law should be understandable by design.
+Legalytic is not just an AI tool; it's the infrastructure for legal clarity.
+
+We don’t offer legal advice.
+We offer insight, transparency, and a semantic understanding of what you sign.
+
+We are building a future where:
+ - Legal documents are not just readable, but explainable.
+ - Risk and responsibility are measurable, not assumed.
+ - AI serves legal literacy, not replaces legal expertise.
+
+---
+
+Legalytic = LAaS
+----------------
+Legal Analysis as a Service (LAaS) is a new category.
+It defines a modular, ethical, and scalable way to process legal text using language models.
+
+Why LAaS?
+- Because legal understanding is fragmented.
+- Because legal systems were built to be interpreted, not parsed.
+- Because contracts are still written in ways most people can't understand.
+
+Legalytic powers multiple products and touchpoints:
+ - Legafy → fast, simplified contract analysis for individuals
+ - Legafy → UI-driven clause-by-clause explanations
+ - External API integrations → for compliance tools, HR systems, DMS platforms
+
+Product Certification System:
+ - Legalytic Reviewed   → Basic AI review
+ - Legalytic Compliant  → Risk-scored + clause-explained
+ - Legalytic Trusted    → High-quality verified legal clarity
+
+Feedback Layer:
+ - Users can mark unclear areas → model improves with real use feedback
+
+Core Layers:
+ - Clause Intelligence   → clause tagging and classification
+ - Ambiguity Resolution  → flagging of undefined or vague sections
+ - RIS Scoring Engine    → risk quantification on a 0–100 scale
+ - Multilingual AI Stack → contract understanding across jurisdictions
+
+Legal Clarity as Infrastructure
+-------------------------------
+Did you know?
+-------------
+Legalytic’s outputs are readable by humans, parsable by machines, and auditable by ethics boards.
+Our goal is not just automation — it's alignment with legal comprehension.
+
+Legalytic doesn't replace legal professionals.
+It supports them by:
+ - surfacing hidden obligations,
+ - simplifying complex clauses,
+ - translating legal risks into understandable terms,
+ - enabling scalable review of large volumes.
+
+We build for:
+ - Developers integrating law into software
+ - Legal teams facing scale
+ - Platforms seeking compliance and transparency
+ - Institutions redefining trust through explainability
+
+Commands
+--------
+# Terminal Enhancements
+# ----------------------
+# Tip: Type 'help' or 'whoami' or 'vision' for hidden insights.
+
+> whoami                          # You are a knowledge-seeker. Welcome.
+> vision                          # Transparency. Alignment. Legal literacy at scale.
+> help                            # Explore commands: analyze, score, export, audit
+
+# AI Terminal Shortcuts
+# ----------------------
+> alias clear='reset terminal && retain memory'
+> alias trust='explain risk && flag ambiguity && export proof'
+> alias legalytic='explain + translate + summarize + warn + score'
+
+
+# Legalytic Command Examples (Interactive Style)
+# =============================================
+> ./analyze --file contract.pdf       # Semantic scan, highlights clauses and risks
+> ./score --clause "termination"       # Risk score and ambiguity warnings for clause
+> ./export --format json               # Download AI output: structured, labeled, clear
+
+> ./explain --clause "payment"         # Natural language summary of payment clause
+> ./translate --lang tr                # Translate legal insights into Turkish
+> ./audit --mode transparent           # Get audit trail of AI decisions
+
+LAaS is a movement.
+Legalytic is its engine.
+
+---
+Built by ThinkPoint OÜ
+LAaS was originally conceptualized and introduced by ThinkPoint's founder, Mahir Sağlamöz.
+He defined the framework, structure, and vision of Legalytic as the core infrastructure for the Legal Analysis as a Service (LAaS) category.
+
+© 2025 Legalytic
+
+<span class="cursor"></span>
 <script>
-    const video = document.getElementById("video");
-    const statusEl = document.getElementById("status");
-    const processCanvas = document.getElementById("process-canvas");
-    const processCtx = processCanvas.getContext("2d");
-    const captureCanvas = document.getElementById("capture-canvas");
-    const captureCtx = captureCanvas.getContext("2d");
-    const debugRect = document.getElementById("debug-rect");
-    const preview = document.getElementById("preview");
-    const previewImg = document.getElementById("preview-img");
-    const restartBtn = document.getElementById("restart-btn");
-    const manualBtn = document.getElementById("manual-btn");
+// Interactive fake terminal logic (basic simulation)
+document.addEventListener('DOMContentLoaded', () => {
+  const terminal = document.body;
+  const input = document.createElement('div');
+  input.contentEditable = true;
+  input.setAttribute('id', 'cli');
+  input.setAttribute('spellcheck', 'false');
+  input.style.outline = 'none';
+  input.style.border = 'none';
+  input.style.display = 'inline-block';
+  input.style.marginTop = '1rem';
+  input.style.width = '100%';
 
-    let stream = null;
-    let processing = false;
-    let captured = false;
-    let cvReady = false;
+  const prompt = document.createElement('span');
+  prompt.innerText = '[user@you ~]$ ';
+  terminal.appendChild(prompt);
+  terminal.appendChild(input);
 
-    // Stabilite için basit state
-    let stableFrames = 0;
-    const REQUIRED_STABLE_FRAMES = 8;   // ~8*80ms = 640ms sabit
-    const BLUR_THRESHOLD = 80.0;        // Laplacian variance eşiği
-    const MIN_CARD_AREA_RATIO = 0.15;   // frame alanının en az %15'i
+  const responses = {
+    'help': 'Available commands: analyze, score, export, audit, explain, translate, vision, whoami',
+    'whoami': 'You are a knowledge-seeker. Welcome to Legalytic.',
+    'vision': 'Transparency. Alignment. Legal literacy at scale.',
+    'analyze': 'Analyzing... [✓] clauses detected, RIS calculated.',
+    'score': 'Clause score: 78 (Medium Risk)',
+    'translate': 'Translated output → Turkish: “Yükümlülük, 30 gün içinde sona erer.”',
+    'explain': '“This clause limits liability in case of indirect damages.”',
+    'audit': 'Audit log: AI v1.0 → explain → detect → RIS → complete.'
+  };
 
-    let lastRect = null;
-
-    // OpenCV hazır olduğunda çalışacak
-    function onOpenCvReady() {
-        cvReady = true;
-        statusEl.textContent = "OpenCV hazır. Kamera açılıyor…";
-        initCamera();
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = input.innerText.trim().toLowerCase();
+      const response = responses[value] || 'Command not recognized.';
+      const output = document.createElement('div');
+      output.innerHTML = `> ${value}
+<span class='highlight'>${response}</span>`;
+      terminal.insertBefore(output, input);
+      input.innerText = '';
     }
-    // opencv.js global callback
-    if (typeof cv !== "undefined") {
-        cv['onRuntimeInitialized'] = onOpenCvReady;
-    } else {
-        // Script henüz yüklenmemişse, window üzerine bağlanır
-        window.Module = {
-            onRuntimeInitialized: onOpenCvReady
-        };
-    }
-
-    async function initCamera() {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: "environment"
-                },
-                audio: false
-            });
-            video.srcObject = stream;
-
-            video.onloadedmetadata = () => {
-                setupCanvasSize();
-                statusEl.textContent = "Kamerayı kimliğe doğrultun…";
-                manualBtn.disabled = false;
-                restartBtn.disabled = true;
-                startProcessingLoop();
-            };
-        } catch (err) {
-            console.error(err);
-            statusEl.textContent = "Kamera açılamadı: " + err.message;
-        }
-    }
-
-    function setupCanvasSize() {
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-
-        // Güvenli default
-        const width = vw || 480;
-        const height = vh || 640;
-
-        processCanvas.width = width;
-        processCanvas.height = height;
-
-        captureCanvas.width = width;
-        captureCanvas.height = height;
-    }
-
-    function startProcessingLoop() {
-        if (processing || !cvReady) return;
-        processing = true;
-        captured = false;
-        stableFrames = 0;
-        lastRect = null;
-        preview.style.display = "none";
-
-        const FPS = 12;
-        const interval = 1000 / FPS;
-
-        const loop = () => {
-            if (!processing) return;
-            processFrame();
-            setTimeout(loop, interval);
-        };
-        loop();
-    }
-
-    function processFrame() {
-        if (!video.videoWidth || !video.videoHeight) return;
-        if (captured) return;
-
-        processCtx.drawImage(video, 0, 0, processCanvas.width, processCanvas.height);
-        const frame = processCtx.getImageData(0, 0, processCanvas.width, processCanvas.height);
-
-        // OpenCV mat'e çevir
-        let src = cv.matFromImageData(frame);
-        let gray = new cv.Mat();
-        let blurred = new cv.Mat();
-        let edges = new cv.Mat();
-
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-        cv.Canny(blurred, edges, 50, 150);
-
-        // Blur değeri (Laplacian variance)
-        let lap = new cv.Mat();
-        cv.Laplacian(gray, lap, cv.CV_64F);
-        const blurScore = lapVariance(lap);
-
-        // Kontur bul
-        let contours = new cv.MatVector();
-        let hierarchy = new cv.Mat();
-        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-        const bestRect = findBestCardRect(contours, src.cols, src.rows);
-
-        // Temizlik
-        src.delete();
-        gray.delete();
-        blurred.delete();
-        edges.delete();
-        lap.delete();
-        contours.delete();
-        hierarchy.delete();
-
-        // Debug / UI update
-        if (bestRect) {
-            const { x, y, w, h } = bestRect;
-            drawDebugRect(x, y, w, h);
-            const areaRatio = (w * h) / (processCanvas.width * processCanvas.height);
-
-            const stable = isStable(bestRect);
-            const blurOk = blurScore >= BLUR_THRESHOLD;
-            const areaOk = areaRatio >= MIN_CARD_AREA_RATIO;
-
-            if (stable && blurOk && areaOk) {
-                stableFrames++;
-                statusEl.textContent = `Kimlik algılandı, sabit bekleniyor… (${stableFrames}/${REQUIRED_STABLE_FRAMES})`;
-            } else {
-                stableFrames = 0;
-                statusEl.textContent = `Kimlik arıyor… (Netlik: ${blurScore.toFixed(0)})`;
-            }
-
-            if (stableFrames >= REQUIRED_STABLE_FRAMES) {
-                autoCapture(bestRect);
-            }
-        } else {
-            hideDebugRect();
-            stableFrames = 0;
-            statusEl.textContent = `Kimlik arıyor…`;
-        }
-    }
-
-    function lapVariance(mat) {
-        // mat: Laplacian CV_64F
-        let data = mat.data64F;
-        if (!data || data.length === 0) return 0.0;
-
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) {
-            sum += data[i];
-        }
-        const mean = sum / data.length;
-
-        let sqDiff = 0;
-        for (let i = 0; i < data.length; i++) {
-            const diff = data[i] - mean;
-            sqDiff += diff * diff;
-        }
-        return sqDiff / data.length;
-    }
-
-    function findBestCardRect(contours, width, height) {
-        let best = null;
-        let bestArea = 0;
-
-        for (let i = 0; i < contours.size(); i++) {
-            const cnt = contours.get(i);
-            const area = cv.contourArea(cnt);
-            if (area < (width * height * 0.05)) continue; // çok küçük gürültü
-
-            // Poligon approx
-            const peri = cv.arcLength(cnt, true);
-            const approx = new cv.Mat();
-            cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-
-            if (approx.rows === 4) {
-                // Dikdörtgen gibi
-                const rect = cv.boundingRect(approx);
-                const rArea = rect.width * rect.height;
-
-                // Oran kontrolü (ID kart ~1.4–1.7 en/boy)
-                const ratio = rect.width / rect.height;
-                if (ratio < 1.3 || ratio > 1.9) {
-                    approx.delete();
-                    continue;
-                }
-
-                if (rArea > bestArea) {
-                    bestArea = rArea;
-                    best = rect;
-                }
-            }
-            approx.delete();
-        }
-
-        if (!best) return null;
-
-        return {
-            x: best.x,
-            y: best.y,
-            w: best.width,
-            h: best.height
-        };
-    }
-
-    function drawDebugRect(x, y, w, h) {
-        const vw = video.videoWidth || processCanvas.width;
-        const vh = video.videoHeight || processCanvas.height;
-
-        const container = document.getElementById("video-container");
-        const cw = container.clientWidth;
-        const ch = container.clientHeight;
-
-        // Video canvas oranı container ile aynı kabul edilip basit ölçekleme
-        const scaleX = cw / processCanvas.width;
-        const scaleY = ch / processCanvas.height;
-
-        debugRect.style.display = "block";
-        debugRect.style.left = (x * scaleX) + "px";
-        debugRect.style.top = (y * scaleY) + "px";
-        debugRect.style.width = (w * scaleX) + "px";
-        debugRect.style.height = (h * scaleY) + "px";
-    }
-
-    function hideDebugRect() {
-        debugRect.style.display = "none";
-    }
-
-    function isStable(rect) {
-        if (!lastRect) {
-            lastRect = rect;
-            return false;
-        }
-        const dx = Math.abs(rect.x - lastRect.x);
-        const dy = Math.abs(rect.y - lastRect.y);
-        const dw = Math.abs(rect.w - lastRect.w);
-        const dh = Math.abs(rect.h - lastRect.h);
-
-        lastRect = rect;
-        // küçük hareket toleransı
-        return dx < 5 && dy < 5 && dw < 5 && dh < 5;
-    }
-
-    function autoCapture(rect) {
-        if (captured) return;
-        captured = true;
-        processing = false;
-        statusEl.textContent = "Otomatik fotoğraf alındı ✅";
-
-        // Video frame'i capture canvas'a çiz
-        captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-
-        // Sadece kart dikdörtgenini crop edelim
-        const { x, y, w, h } = rect;
-        const cropped = captureCtx.getImageData(x, y, w, h);
-
-        // Crop için geçici canvas
-        const tmpCanvas = document.createElement("canvas");
-        tmpCanvas.width = w;
-        tmpCanvas.height = h;
-        const tmpCtx = tmpCanvas.getContext("2d");
-        tmpCtx.putImageData(cropped, 0, 0);
-
-        const dataUrl = tmpCanvas.toDataURL("image/jpeg", 0.95);
-
-        showPreview(dataUrl);
-        uploadToServer(dataUrl);
-
-        restartBtn.disabled = false;
-        manualBtn.disabled = true;
-    }
-
-    function manualCapture() {
-        if (captured) return;
-
-        processing = false;
-        captured = true;
-
-        statusEl.textContent = "Manuel fotoğraf alındı ✅";
-
-        captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.95);
-
-        showPreview(dataUrl);
-        uploadToServer(dataUrl);
-
-        restartBtn.disabled = false;
-        manualBtn.disabled = true;
-    }
-
-    function showPreview(dataUrl) {
-        previewImg.src = dataUrl;
-        preview.style.display = "block";
-    }
-
-    function resetCapture() {
-        captured = false;
-        processing = false;
-        stableFrames = 0;
-        lastRect = null;
-        hideDebugRect();
-        preview.style.display = "none";
-        manualBtn.disabled = false;
-        restartBtn.disabled = true;
-        statusEl.textContent = "Kamerayı kimliğe doğrultun…";
-        startProcessingLoop();
-    }
-
-    async function uploadToServer(dataUrl) {
-        // dataUrl: "data:image/jpeg;base64,...."
-        // backend'e yalnızca base64 kısmını göndermek istersen:
-        const base64 = dataUrl.split(",")[1];
-
-        // Burayı Copoint / Documents API endpoint'inle değiştir:
-        const payload = {
-            imageBase64: base64,
-            type: "id_front",
-            source: "browser_auto_capture"
-        };
-
-        console.log("Upload payload (kısaltılmış):", {
-            ...payload,
-            imageBase64: payload.imageBase64.slice(0, 50) + "..."
-        });
-
-        // Örnek fetch:
-        /*
-        try {
-            const res = await fetch("https://your-backend/api/id-upload", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            });
-            if (!res.ok) throw new Error("Upload failed " + res.status);
-            const json = await res.json();
-            console.log("Upload OK:", json);
-        } catch (err) {
-            console.error("Upload error:", err);
-            statusEl.textContent = "Upload hatası: " + err.message;
-        }
-        */
-    }
-
-    restartBtn.addEventListener("click", resetCapture);
-    manualBtn.addEventListener("click", manualCapture);
+  });
+});
 </script>
 </body>
 </html>
