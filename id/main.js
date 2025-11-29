@@ -105,21 +105,18 @@ function setupCanvasSize() {
     captureCanvas.height = height;
 }
 
+// KAMERA ARTIK SADECE BİR KEZ AÇILIYOR
 async function initCamera() {
     try {
-        const step = steps[currentStepIndex];
-        const isSelfie = step === "selfie";
+        // Kamera zaten açıksa tekrar açma → ikinci bir izin sorulmaz
+        if (stream) return;
 
         const constraints = {
             video: {
-                facingMode: isSelfie ? "user" : "environment"
+                facingMode: "environment" // tüm adımlar için aynı kamera
             },
             audio: false
         };
-
-        if (stream) {
-            stream.getTracks().forEach(t => t.stop());
-        }
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
@@ -160,7 +157,7 @@ function processFrame() {
 
     const step = steps[currentStepIndex];
 
-    // Selfie adımında auto-capture yok
+    // Selfie adımında auto-capture yok, sadece manuel
     if (step === "selfie") {
         return;
     }
@@ -424,13 +421,10 @@ function goToNextStep() {
         stableFrames = 0;
         hideDebugRect();
         updateUIForStep();
-        if (!USE_FAKE_CAMERA) {
-            initCamera();
-        } else {
-            setupCanvasSize();
-            captured = false;
-            startProcessingLoop();
-        }
+
+        // Kamera zaten açık, sadece işleme loop'unu yeniden başlat
+        setupCanvasSize();
+        startProcessingLoop();
     }
 }
 
@@ -457,8 +451,9 @@ function onOpenCvReady() {
     cvReady = true;
     statusEl.textContent = "OpenCV hazır. Kamera açılıyor…";
     updateUIForStep();
+
     if (!USE_FAKE_CAMERA) {
-        initCamera();
+        initCamera(); // burada bir kere açıyoruz
     } else {
         setupCanvasSize();
         captured = false;
@@ -519,6 +514,7 @@ if (fakeCameraToggle) {
             if (testImageInput) {
                 testImageInput.disabled = false;
             }
+            // Fake modda gerçek kamerayı kapat
             if (stream) {
                 stream.getTracks().forEach(t => t.stop());
                 stream = null;
@@ -534,6 +530,7 @@ if (fakeCameraToggle) {
             captured = false;
             processing = false;
             hideDebugRect();
+            // Normal moda dön: kamera yoksa aç
             if (cvReady) {
                 initCamera();
             }
