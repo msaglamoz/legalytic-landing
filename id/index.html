@@ -287,8 +287,8 @@
 
         const labels = {
             id_front: "Adım 1 / 3 – Kimlik ön yüz",
-            id_back: "Adım 2 / 3 – Kimlik arka yüz",
-            selfie:  "Adım 3 / 3 – Selfie"
+            id_back:  "Adım 2 / 3 – Kimlik arka yüz",
+            selfie:   "Adım 3 / 3 – Selfie"
         };
 
         const hints = {
@@ -304,12 +304,11 @@
         frameGuide.style.display = isSelfie ? "none" : "block";
         selfieCircle.style.display = isSelfie ? "block" : "none";
 
-        // Auto-capture: sadece ön/arka
         manualBtn.disabled = !cvReady;
         restartBtn.disabled = true;
-        nextStepBtn.disabled = !captured; // sadece o adım bitince aktif olacak
+        nextStepBtn.disabled = !captured;
 
-        if (step === "selfie") {
+        if (isSelfie) {
             statusEl.textContent = "Selfie adımı – yüzünü kadraja al.";
         } else {
             statusEl.textContent = "Kamerayı kimliğe doğrultun…";
@@ -330,12 +329,25 @@
         };
     }
 
+    // 🔥 Kamera, adım durumuna göre ön/arka seçiliyor
     async function initCamera() {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" },
+            const step = steps[currentStepIndex];
+            const isSelfie = step === "selfie";
+
+            const constraints = {
+                video: {
+                    facingMode: isSelfie ? "user" : "environment"
+                },
                 audio: false
-            });
+            };
+
+            // Eski stream varsa durdur
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+            }
+
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
 
             video.onloadedmetadata = () => {
@@ -389,7 +401,7 @@
 
         const step = steps[currentStepIndex];
 
-        // Selfie adımında OpenCV ile auto-capture yapmıyoruz, sadece canlı görüntü
+        // Selfie adımında OpenCV ile auto-capture yok, manuel
         if (step === "selfie") {
             return;
         }
@@ -569,9 +581,6 @@
     function manualCapture() {
         if (captured) return;
 
-        const step = steps[currentStepIndex];
-
-        // Selfie veya zorlama durumlar için tüm frame'i çek
         processing = false;
         captured = true;
 
@@ -600,7 +609,6 @@
             previewSelfie.src = dataUrl;
         }
 
-        // Eğer üçü de doluysa submit aktif
         if (frontImage && backImage && selfieImage) {
             submitBtn.disabled = false;
         }
@@ -619,6 +627,7 @@
         startProcessingLoop();
     }
 
+    // 🔥 Adım değişince kamerayı da yeniden init ediyoruz
     function goToNextStep() {
         if (currentStepIndex < steps.length - 1) {
             currentStepIndex++;
@@ -628,7 +637,7 @@
             lastRect = null;
             hideDebugRect();
             updateUIForStep();
-            startProcessingLoop();
+            initCamera();   // kamera burada ön/arka olarak yeniden seçiliyor
         }
     }
 
