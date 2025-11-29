@@ -1,4 +1,3 @@
-<script>
     const video = document.getElementById("video");
     const statusEl = document.getElementById("status");
     const stepIndicator = document.getElementById("step-indicator");
@@ -494,4 +493,4 @@
     manualBtn.addEventListener("click", manualCapture);
     nextStepBtn.addEventListener("click", goToNextStep);
     submitBtn.addEventListener("click", submitAll);
-</script>
+
