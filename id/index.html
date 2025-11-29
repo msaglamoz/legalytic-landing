@@ -5,6 +5,7 @@
     <title>Copoint – ID + Selfie Capture Wizard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+    <!-- Basit stil -->
     <style>
         body {
             margin: 0;
@@ -75,18 +76,18 @@
             pointer-events: none;
         }
 
-        /* BÜYÜTÜLMÜŞ kimlik çerçevesi */
-        #frame-guide {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 90%;          /* önce 70% idi */
-            height: 60%;         /* önce 42% idi */
-            transform: translate(-50%, -50%);
-            border-radius: 18px;
-            border: 3px dashed rgba(148,163,184,0.9);
-            box-shadow: 0 0 0 9999px rgba(15,23,42,0.6);
-        }
+        /* Ortada kimlik için kılavuz çerçeve (ön/arka) */
+		#frame-guide {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 90%;          /* %70 → %90 : yatayda daha geniş */
+			height: 60%;         /* %42 → %60 : dikeyde daha geniş */
+			transform: translate(-50%, -50%);
+			border-radius: 18px;
+			border: 3px dashed rgba(148,163,184,0.9);   /* biraz daha kalın ve belirgin */
+			box-shadow: 0 0 0 9999px rgba(15,23,42,0.6);
+		}
 
         /* Selfie modunda yüz çemberi */
         #selfie-circle {
@@ -233,6 +234,7 @@
     <button id="submit-btn" disabled>Hepsini gönder</button>
 </div>
 
+<!-- İşleme için canvas'lar -->
 <canvas id="process-canvas"></canvas>
 <canvas id="capture-canvas"></canvas>
 
@@ -265,12 +267,14 @@
     let captured = false;
     let cvReady = false;
 
+    // Wizard state
     const steps = ["id_front", "id_back", "selfie"];
     let currentStepIndex = 0;
     let frontImage = null;
     let backImage = null;
     let selfieImage = null;
 
+    // Stabilite için basit state (ön/arka)
     let stableFrames = 0;
     const REQUIRED_STABLE_FRAMES = 8;
     const BLUR_THRESHOLD = 80.0;
@@ -311,15 +315,6 @@
         }
     }
 
-    // Selfie adımında aynalama, diğer adımlarda normal
-    function updateCameraForStep() {
-        const step = steps[currentStepIndex];
-        const isSelfie = (step === "selfie");
-
-        // Tüm adımlar aynı stream, sadece görüntüyü aynalıyoruz
-        video.style.transform = isSelfie ? "scaleX(-1)" : "scaleX(1)";
-    }
-
     function onOpenCvReady() {
         cvReady = true;
         statusEl.textContent = "OpenCV hazır. Kamera açılıyor…";
@@ -334,14 +329,23 @@
         };
     }
 
-    // Kamera sadece 1 kez açılır → tüm wizard boyunca aynı stream kullanılır
+    // 🔥 Kamera, adım durumuna göre ön/arka seçiliyor
     async function initCamera() {
         try {
-            // Tamamı ön kamera
+            const step = steps[currentStepIndex];
+            const isSelfie = step === "selfie";
+
             const constraints = {
-                video: { facingMode: "user" },
+                video: {
+                    facingMode: isSelfie ? "user" : "environment"
+                },
                 audio: false
             };
+
+            // Eski stream varsa durdur
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+            }
 
             stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
@@ -350,7 +354,6 @@
                 setupCanvasSize();
                 captured = false;
                 updateUIForStep();
-                updateCameraForStep();
                 startProcessingLoop();
             };
         } catch (err) {
@@ -374,8 +377,7 @@
     }
 
     function startProcessingLoop() {
-        if (!cvReady) return;
-        if (processing) return;
+        if (processing || !cvReady) return;
         processing = true;
         captured = false;
         stableFrames = 0;
@@ -399,7 +401,7 @@
 
         const step = steps[currentStepIndex];
 
-        // Selfie adımında auto-capture yok, sadece manuel
+        // Selfie adımında OpenCV ile auto-capture yok, manuel
         if (step === "selfie") {
             return;
         }
@@ -558,21 +560,7 @@
         statusEl.textContent = "Otomatik fotoğraf alındı ✅";
 
         captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-
-        // Dikdörtgeni biraz genişlet (padding ile) → daha büyük kare
-        const padding = 0.10; // %10 pay
-        let x = Math.max(0, rect.x - rect.w * padding);
-        let y = Math.max(0, rect.y - rect.h * padding);
-        let w = rect.w * (1 + 2 * padding);
-        let h = rect.h * (1 + 2 * padding);
-
-        if (x + w > captureCanvas.width) {
-            w = captureCanvas.width - x;
-        }
-        if (y + h > captureCanvas.height) {
-            h = captureCanvas.height - y;
-        }
-
+        const { x, y, w, h } = rect;
         const cropped = captureCtx.getImageData(x, y, w, h);
 
         const tmpCanvas = document.createElement("canvas");
@@ -639,6 +627,7 @@
         startProcessingLoop();
     }
 
+    // 🔥 Adım değişince kamerayı da yeniden init ediyoruz
     function goToNextStep() {
         if (currentStepIndex < steps.length - 1) {
             currentStepIndex++;
@@ -648,8 +637,7 @@
             lastRect = null;
             hideDebugRect();
             updateUIForStep();
-            updateCameraForStep();
-            startProcessingLoop();
+            initCamera();   // kamera burada ön/arka olarak yeniden seçiliyor
         }
     }
 
