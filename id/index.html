@@ -330,37 +330,47 @@
     }
 
     // 🔥 Kamera, adım durumuna göre ön/arka seçiliyor
-    async function initCamera() {
-        try {
-            const step = steps[currentStepIndex];
-            const isSelfie = step === "selfie";
 
-            const constraints = {
-                video: {
-                    facingMode: isSelfie ? "user" : "environment"
-                },
-                audio: false
-            };
 
-            // Eski stream varsa durdur
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-            }
+async function initCamera() {
+    try {
+        const step = steps[currentStepIndex];
+        const isSelfie = step === "selfie";
 
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
+        const constraints = {
+            video: {
+                facingMode: isSelfie ? "user" : "environment"
+            },
+            audio: false
+        };
 
-            video.onloadedmetadata = () => {
-                setupCanvasSize();
-                captured = false;
-                updateUIForStep();
-                startProcessingLoop();
-            };
-        } catch (err) {
-            console.error(err);
-            statusEl.textContent = "Kamera açılamadı: " + err.message;
+        // Eski stream varsa durdur
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
         }
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+
+        // 🔥 Selfie adımında tarayıcının verdiği aynayı tekrar çevir → düz görünür
+        if (isSelfie) {
+            video.style.transform = "scaleX(-1)"; // ön kamera ters görünmesin
+        } else {
+            video.style.transform = "scaleX(1)";  // kimlik adımlarında normal
+        }
+
+        video.onloadedmetadata = () => {
+            setupCanvasSize();
+            captured = false;
+            updateUIForStep();
+            startProcessingLoop();
+        };
+    } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Kamera açılamadı: " + err.message;
     }
+}
+
 
     function setupCanvasSize() {
         const vw = video.videoWidth;
