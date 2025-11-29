@@ -247,10 +247,14 @@
     const frameGuide = document.getElementById("frame-guide");
     const selfieCircle = document.getElementById("selfie-circle");
 
-    const processCanvas = document.getElementById("process-canvas");
-    const processCtx = processCanvas.getContext("2d");
-    const captureCanvas = document.getElementById("capture-canvas");
-    const captureCtx = captureCanvas.getContext("2d");
+	const processCanvas = document.getElementById("process-canvas");
+	// getImageData ile sürekli okuma yaptığın canvas
+	const processCtx = processCanvas.getContext("2d", { willReadFrequently: true });
+
+	const captureCanvas = document.getElementById("capture-canvas");
+	// bunda sürekli getImageData yok, normal kalsın yeterli
+	const captureCtx = captureCanvas.getContext("2d");
+
 
     const debugRect = document.getElementById("debug-rect");
 
