@@ -18,7 +18,8 @@ const frameGuide = document.getElementById("frame-guide");
 const selfieCircle = document.getElementById("selfie-circle");
 
 const processCanvas = document.getElementById("process-canvas");
-const processCtx = processCanvas.getContext("2d");
+// Sık sık getImageData okuduğumuz canvas → willReadFrequently:true
+const processCtx = processCanvas.getContext("2d", { willReadFrequently: true });
 const captureCanvas = document.getElementById("capture-canvas");
 const captureCtx = captureCanvas.getContext("2d");
 
@@ -64,6 +65,7 @@ let USE_FAKE_CAMERA = false;
 let testImage = null;
 
 let lastRect = null;
+let currentFacingMode = "environment"; // aktif kamera yönü
 
 function updateUIForStep() {
     const step = steps[currentStepIndex];
@@ -106,7 +108,7 @@ function setupCanvasSize() {
     captureCanvas.height = height;
 }
 
-// KAMERA SADECE BİR KEZ AÇILIYOR
+// KAMERA SADECE BİR KEZ AÇILIYOR (arka kamera ile)
 async function initCamera() {
     try {
         if (cameraInitialized) return; // ikinci kez asla açma
@@ -120,6 +122,7 @@ async function initCamera() {
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         cameraInitialized = true;
+        currentFacingMode = "environment";
 
         video.srcObject = stream;
 
@@ -132,6 +135,26 @@ async function initCamera() {
     } catch (err) {
         console.error(err);
         statusEl.textContent = "Kamera erişimi başarısız oldu.";
+    }
+}
+
+// Mevcut stream üzerinden ön/arka kamera değiştirme denemesi
+async function ensureCameraFacing(mode) {
+    if (!stream) return;
+    if (currentFacingMode === mode) return;
+
+    const tracks = stream.getVideoTracks();
+    if (!tracks || !tracks[0]) return;
+    const track = tracks[0];
+
+    if (track.applyConstraints) {
+        try {
+            await track.applyConstraints({ facingMode: mode });
+            currentFacingMode = mode;
+            console.log("Kamera yönü değişti:", mode);
+        } catch (e) {
+            console.warn("facingMode değiştirilemedi, mevcut kamera kullanılacak:", e);
+        }
     }
 }
 
@@ -159,7 +182,7 @@ function processFrame() {
 
     const step = steps[currentStepIndex];
 
-    // Selfie adımında auto-capture yok
+    // Selfie adımında auto-capture yok; sadece manuel çekim
     if (step === "selfie") {
         return;
     }
@@ -411,7 +434,8 @@ function resetCurrentStep() {
     submitBtn.disabled = !(frontImage && backImage && selfieImage);
 }
 
-function goToNextStep() {
+// 🔹 Artık async: Selfie adımında ön kameraya geçmeyi deniyoruz
+async function goToNextStep() {
     if (currentStepIndex < steps.length - 1) {
         currentStepIndex++;
         processing = false;
@@ -419,6 +443,17 @@ function goToNextStep() {
         stableFrames = 0;
         hideDebugRect();
         updateUIForStep();
+
+        const step = steps[currentStepIndex];
+
+        if (step === "selfie") {
+            // Selfie adımında ön kamera
+            await ensureCameraFacing("user");
+        } else {
+            // Diğer adımlarda arka kamera
+            await ensureCameraFacing("environment");
+        }
+
         setupCanvasSize();
         startProcessingLoop();
     }
@@ -469,7 +504,7 @@ if (typeof cv !== "undefined") {
 // Event binding
 restartBtn.addEventListener("click", resetCurrentStep);
 manualBtn.addEventListener("click", manualCapture);
-nextStepBtn.addEventListener("click", goToNextStep);
+nextStepBtn.addEventListener("click", () => { goToNextStep(); });
 submitBtn.addEventListener("click", submitAll);
 
 // Test panel
