@@ -2,18 +2,6 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8" />
-	<meta http-equiv="Content-Security-Policy" 
-      content="
-      default-src 'self';
-      img-src 'self' data:;
-      script-src 'self';
-      style-src 'self' 'unsafe-inline';
-      connect-src https://api.copoint.com;
-      media-src 'self';
-      frame-ancestors 'none';
-      base-uri 'self';
-      ">
-
     <title>Copoint – ID + Selfie Capture Wizard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -231,15 +219,12 @@
 
     <div id="preview-wrapper">
         <div class="preview-card">
-            <img id="preview-front" alt="Ön yüz" />
             <div>Ön yüz</div>
         </div>
         <div class="preview-card">
-            <img id="preview-back" alt="Arka yüz" />
             <div>Arka yüz</div>
         </div>
         <div class="preview-card">
-            <img id="preview-selfie" alt="Selfie" />
             <div>Selfie</div>
         </div>
     </div>
