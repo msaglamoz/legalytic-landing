@@ -377,19 +377,24 @@ async function initCamera() {
 }
 
 
-    function setupCanvasSize() {
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
+	function setupCanvasSize() {
+		const vw = video.videoWidth;
+		const vh = video.videoHeight;
 
-        const width = vw || 480;
-        const height = vh || 640;
+		const baseWidth  = vw || 480;
+		const baseHeight = vh || 640;
 
-        processCanvas.width = width;
-        processCanvas.height = height;
+		const dpr = window.devicePixelRatio || 1;
 
-        captureCanvas.width = width;
-        captureCanvas.height = height;
-    }
+		// İşleme için çok abartmaya gerek yok, hız önemli:
+		processCanvas.width  = baseWidth;
+		processCanvas.height = baseHeight;
+
+		// Capture için biraz daha yüksek çözünürlük isteyebiliriz:
+		captureCanvas.width  = Math.round(baseWidth * dpr);
+		captureCanvas.height = Math.round(baseHeight * dpr);
+	}
+
 
     function startProcessingLoop() {
         if (processing || !cvReady) return;
@@ -584,7 +589,7 @@ async function initCamera() {
         const tmpCtx = tmpCanvas.getContext("2d");
         tmpCtx.putImageData(cropped, 0, 0);
 
-        const dataUrl = tmpCanvas.toDataURL("image/jpeg", 0.95);
+        const dataUrl = tmpCanvas.toDataURL("image/jpeg", 1);
 
         storeImageForCurrentStep(dataUrl);
 
@@ -602,7 +607,7 @@ async function initCamera() {
         statusEl.textContent = "Manuel fotoğraf alındı ✅";
 
         captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.95);
+        const dataUrl = captureCanvas.toDataURL("image/jpeg", 1);
 
         storeImageForCurrentStep(dataUrl);
 
