@@ -560,49 +560,79 @@ async function initCamera() {
         return dx < 5 && dy < 5 && dw < 5 && dh < 5;
     }
 
-    function autoCapture(rect) {
-        if (captured) return;
-        captured = true;
-        processing = false;
+	function autoCapture(rect) {
+		if (captured) return;
 
-        statusEl.textContent = "Otomatik fotoğraf alındı ✅";
+		try {
+			captured = true;
+			processing = false;
 
-        captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const { x, y, w, h } = rect;
-        const cropped = captureCtx.getImageData(x, y, w, h);
+			statusEl.textContent = "Otomatik fotoğraf alındı ✅";
 
-        const tmpCanvas = document.createElement("canvas");
-        tmpCanvas.width = w;
-        tmpCanvas.height = h;
-        const tmpCtx = tmpCanvas.getContext("2d");
-        tmpCtx.putImageData(cropped, 0, 0);
+			// Tüm frame'i çiz
+			captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
 
-        const dataUrl = tmpCanvas.toDataURL("image/jpeg", 0.95);
+			const { x, y, w, h } = rect;
 
-        storeImageForCurrentStep(dataUrl);
+			// Safari'de getImageData bazen patlayabiliyor, o yüzden try/catch içinde
+			const tmpCanvas = document.createElement("canvas");
+			tmpCanvas.width = w;
+			tmpCanvas.height = h;
+			const tmpCtx = tmpCanvas.getContext("2d");
 
-        restartBtn.disabled = false;
-        manualBtn.disabled = true;
-        nextStepBtn.disabled = false;
-    }
+			// Direkt video'dan crop çiz (getImageData yerine)
+			tmpCtx.drawImage(
+				video,
+				x, y, w, h,   // kaynaktan alınan bölge
+				0, 0, w, h    // hedef canvas
+			);
 
-    function manualCapture() {
-        if (captured) return;
+			// Safari için parametresiz toDataURL daha problemsiz
+			const dataUrl = tmpCanvas.toDataURL("image/jpeg");
 
-        processing = false;
-        captured = true;
+			storeImageForCurrentStep(dataUrl);
 
-        statusEl.textContent = "Manuel fotoğraf alındı ✅";
+			restartBtn.disabled = false;
+			manualBtn.disabled = true;
+			nextStepBtn.disabled = false;
+		} catch (e) {
+			console.error("autoCapture hatası (Safari?):", e);
+			statusEl.textContent = "Görsel yakalanırken bir hata oluştu.";
+			captured = false;
+			processing = false;
+		}
+	}
 
-        captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.95);
 
-        storeImageForCurrentStep(dataUrl);
+	function manualCapture() {
+		if (captured) return;
 
-        restartBtn.disabled = false;
-        manualBtn.disabled = true;
-        nextStepBtn.disabled = false;
-    }
+		try {
+			processing = false;
+			captured = true;
+
+			statusEl.textContent = "Manuel fotoğraf alındı ✅";
+
+			// Video görüntüsünü tüm canvas'a çiz
+			captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+			// Safari için parametresiz JPEG çağrısı
+			const dataUrl = captureCanvas.toDataURL("image/jpeg");
+
+			// Önizleme + state
+			storeImageForCurrentStep(dataUrl);
+
+			restartBtn.disabled = false;
+			manualBtn.disabled = true;
+			nextStepBtn.disabled = false;
+		} catch (e) {
+			console.error("manualCapture hatası (Safari?):", e);
+			statusEl.textContent = "Fotoğraf alınırken bir hata oluştu.";
+			captured = false;
+			processing = false;
+		}
+	}
+
 
     function storeImageForCurrentStep(dataUrl) {
         const step = steps[currentStepIndex];
